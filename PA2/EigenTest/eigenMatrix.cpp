@@ -10,7 +10,7 @@ using namespace std;
 
 using namespace Eigen;
 
-#define MATRIX_SIZE 50
+#define MATRIX_SIZE 100
 
 /****************************
 * 本程序演示了 Eigen 基本类型的使用
