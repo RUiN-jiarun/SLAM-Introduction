@@ -9,11 +9,22 @@
 // need pangolin for plotting trajectory
 #include <pangolin/pangolin.h>
 
+#include <sstream>
+
 using namespace std;
 using namespace Eigen;
 
 // path to trajectory file
-string trajectory_file = "DrawTrajectory/trajectory.txt";
+string trajectory_file = "../trajectory.txt";
+
+// try to use a template function to change string to double
+template <class Type>
+Type str2num(const string& str) {
+    istringstream iss(str);
+    Type num;
+    iss >> num;
+    return num;
+}
 
 // function for plotting trajectory, don't edit this code
 // start point is red and end point is blue
@@ -29,8 +40,18 @@ int main(int argc, char **argv) {
     while (!fin.peek() != EOF) {
         double time, tx, ty, tz, qx, qy, qz, qw;
         fin >> time >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
+        // fscanf()
+        // cout << qx << " " << qy << " " << qz << " " << qw << endl;
+        // double txd = str2num<double>(tx);
+        // double tyd = str2num<double>(ty);
+        // double tzd = str2num<double>(tz);
+        // double qxd = str2num<double>(qx);
+        // double qyd = str2num<double>(qy);
+        // double qzd = str2num<double>(qz);
+        // double qwd = str2num<double>(qw);
         Quaterniond q(qw, qx, qy, qz);
         Vector3d t(tx, ty, tz);
+        // q.normalize();
         Sophus::SE3d SE3d_qt(q, t);
         poses.push_back(SE3d_qt);
     }
