@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     /// implement pose reading code
     // start your code here (5~10 lines)
     ifstream fin(trajectory_file);
-    while (!fin.peek() != EOF) {
+    while (!fin.eof()) {
         double time, tx, ty, tz, qx, qy, qz, qw;
         fin >> time >> tx >> ty >> tz >> qx >> qy >> qz >> qw;
         // fscanf()
