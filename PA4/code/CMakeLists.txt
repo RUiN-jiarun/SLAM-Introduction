@@ -16,3 +16,6 @@ target_link_libraries(Undistort ${OpenCV_LIBS})
 
 add_executable(StereoVision disparity.cpp)
 target_link_libraries(StereoVision ${OpenCV_LIBS} ${Pangolin_LIBRARIES} ${EIGEN3_LIBS})
+
+add_executable(GaussNewton gaussnewton.cpp)
+target_link_libraries(GaussNewton ${OpenCV_LIBS})
