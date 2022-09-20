@@ -17,3 +17,7 @@ include_directories("/usr/local/include")
 add_executable(DrawTrajectory draw_trajectory.cpp)
 target_link_libraries(DrawTrajectory Sophus::Sophus)
 target_link_libraries(DrawTrajectory ${Sophus_LIBARARIES} ${OpenCV_LIBS} ${Pangolin_LIBRARIES} ${EIGEN3_LIBS})
+
+add_executable(RMSE traj_error.cpp)
+target_link_libraries(RMSE Sophus::Sophus)
+target_link_libraries(RMSE ${Sophus_LIBARARIES} ${OpenCV_LIBS} ${Pangolin_LIBRARIES} ${EIGEN3_LIBS})
