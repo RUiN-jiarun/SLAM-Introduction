@@ -18,3 +18,6 @@ target_link_libraries(ORB ${OpenCV_LIBS})
 
 add_executable(E2Rt E2Rt.cpp)
 target_link_libraries(E2Rt ${EIGEN3_LIBS} Sophus::Sophus)
+
+add_executable(BA GN-BA.cpp)
+target_link_libraries(BA ${EIGEN3_LIBS} Sophus::Sophus)
