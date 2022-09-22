@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
 
     double RMSE = sqrt(error/cnt);
     cout << "RMSE: " << RMSE << endl;
-
+    // RMSE: 2.20548
     // draw trajectory in pangolin
     DrawTrajectory(gt_poses, est_poses);
     return 0;

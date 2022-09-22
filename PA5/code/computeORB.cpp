@@ -10,8 +10,8 @@
 using namespace std;
 
 // global variables
-string first_file = "./1.png";
-string second_file = "./2.png";
+string first_file = "../1.png";
+string second_file = "../2.png";
 
 const double pi = 3.1415926;    // pi
 
@@ -110,6 +110,15 @@ void computeAngle(const cv::Mat &image, vector<cv::KeyPoint> &keypoints) {
     for (auto &kp : keypoints) {
 	// START YOUR CODE HERE (~7 lines)
         kp.angle = 0; // compute kp.angle 
+        float m01 = 0, m10 = 0;
+        for (int dx = -half_patch_size; dx < half_patch_size; dx++) {
+            for (int dy = -half_patch_size; dy < half_patch_size; dy++) {
+                u_char pixel = image.at<u_char> (kp.pt.y + dy, kp.pt.x + dx);
+                m01 += dx * pixel;
+                m10 += dy * pixel;
+            }
+        }
+        kp.angle = cv::fastAtan2(m01, m10);
         // END YOUR CODE HERE
     }
     return;
@@ -382,8 +391,25 @@ void computeORBDesc(const cv::Mat &image, vector<cv::KeyPoint> &keypoints, vecto
         DescType d(256, false);
         for (int i = 0; i < 256; i++) {
             // START YOUR CODE HERE (~7 lines)
-            d[i] = 0;  // if kp goes outside, set d.clear()
-	    // END YOUR CODE HERE
+            
+            cv::Point2f p(ORB_pattern[4 * i], ORB_pattern[4 * i + 1]);
+            cv::Point2f q(ORB_pattern[4 * i + 2], ORB_pattern[4 * i + 3]);
+            // rotate
+            float sin_theta = sin(kp.angle / 180 * M_PI);
+            float cos_theta = cos(kp.angle / 180 * M_PI);
+            cv::Point2f pp = cv::Point2f(p.x * cos_theta - p.y * sin_theta, p.x * sin_theta + p.y * cos_theta) + kp.pt;
+            cv::Point2f qq = cv::Point2f(q.x * cos_theta - q.y * sin_theta, q.x * sin_theta + q.y * cos_theta) + kp.pt;
+            
+            // if kp goes outside, set d.clear()
+            if ((pp.x < 0 || pp.y < 0 || pp.x >= image.size().width || pp.y >= image.size().height) || 
+                (qq.x < 0 || qq.y < 0 || qq.x >= image.size().width || qq.y >= image.size().height)) {
+                    d.clear();
+                    break;
+                }
+            if (image.at<u_char>(pp.y, pp.x) < image.at<u_char>(qq.y, qq.x)) {
+                d[i] = true;
+            }
+        // END YOUR CODE HERE
         }
         desc.push_back(d);
     }
@@ -402,6 +428,27 @@ void bfMatch(const vector<DescType> &desc1, const vector<DescType> &desc2, vecto
 
     // START YOUR CODE HERE (~12 lines)
     // find matches between desc1 and desc2. 
+    for (size_t i1 = 0; i1 < desc1.size(); i1++) {
+        if (desc1[i1].empty())  continue;
+        int d_min = d_max;
+        int min_ind = -1;
+        for (size_t i2 = 0; i2 < desc2.size(); i2++) {
+            if (desc2[i2].empty())  continue;
+            int dist = 0;
+            for (int k = 0; k < 256; k++) {
+                if (desc1[i1][k] != desc2[i2][k]) {
+                    dist++;
+                }
+            }
+            if (dist < d_min) {
+                d_min = dist;
+                min_ind = i2;
+            }
+        }
+        if (d_min < d_max) {
+            matches.push_back(cv::DMatch(i1, min_ind, d_min));
+        }
+    }
     // END YOUR CODE HERE
 
     for (auto &m: matches) {
