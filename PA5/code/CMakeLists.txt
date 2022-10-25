@@ -21,3 +21,6 @@ target_link_libraries(E2Rt ${EIGEN3_LIBS} Sophus::Sophus)
 
 add_executable(BA GN-BA.cpp)
 target_link_libraries(BA ${EIGEN3_LIBS} Sophus::Sophus)
+
+add_executable(ICP ICP.cpp)
+target_link_libraries(ICP ${EIGEN3_LIBS} Sophus::Sophus ${Pangolin_LIBRARIES})
