@@ -1,15 +1,15 @@
 #include <opencv2/opencv.hpp>
 #include <string>
-#include <Eigen/Core>
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/Dense>
 
 using namespace std;
 using namespace cv;
 
 // this program shows how to use optical flow
 
-string file_1 = "./1.png";  // first image
-string file_2 = "./2.png";  // second image
+string file_1 = "../1.png";  // first image
+string file_2 = "../2.png";  // second image
 
 // TODO implement this funciton
 /**
@@ -73,8 +73,8 @@ inline float GetPixelValue(const cv::Mat &img, float x, float y) {
 int main(int argc, char **argv) {
 
     // images, note they are CV_8UC1, not CV_8UC3
-    Mat img1 = imread(file_1, 0);
-    Mat img2 = imread(file_2, 0);
+    Mat img1 = imread(file_1);
+    Mat img2 = imread(file_2);
 
     // key points, using GFTT here.
     vector<KeyPoint> kp1;
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 
     // plot the differences of those functions
     Mat img2_single;
-    cv::cvtColor(img2, img2_single, CV_GRAY2BGR);
+    cv::cvtColor(img2, img2_single, cv::COLOR_BGR2GRAY);
     for (int i = 0; i < kp2_single.size(); i++) {
         if (success_single[i]) {
             cv::circle(img2_single, kp2_single[i].pt, 2, cv::Scalar(0, 250, 0), 2);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
     }
 
     Mat img2_multi;
-    cv::cvtColor(img2, img2_multi, CV_GRAY2BGR);
+    cv::cvtColor(img2, img2_multi, cv::COLOR_BGR2GRAY);
     for (int i = 0; i < kp2_multi.size(); i++) {
         if (success_multi[i]) {
             cv::circle(img2_multi, kp2_multi[i].pt, 2, cv::Scalar(0, 250, 0), 2);
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     }
 
     Mat img2_CV;
-    cv::cvtColor(img2, img2_CV, CV_GRAY2BGR);
+    cv::cvtColor(img2, img2_CV, cv::COLOR_BGR2GRAY);
     for (int i = 0; i < pt2.size(); i++) {
         if (status[i]) {
             cv::circle(img2_CV, pt2[i], 2, cv::Scalar(0, 250, 0), 2);
@@ -130,6 +130,9 @@ int main(int argc, char **argv) {
     cv::imshow("tracked single level", img2_single);
     cv::imshow("tracked multi level", img2_multi);
     cv::imshow("tracked by opencv", img2_CV);
+    cv::imwrite("tracked_single_level.jpg", img2_single);
+    cv::imwrite("tracked_multi_level.jpg", img2_multi);
+    cv::imwrite("tracked_by_opencv.jpg", img2_CV);
     cv::waitKey(0);
 
     return 0;
@@ -181,21 +184,28 @@ void OpticalFlowSingleLevel(
                     Eigen::Vector2d J;  // Jacobian
                     if (inverse == false) {
                         // Forward Jacobian
+                        J[0] = -0.5*(GetPixelValue(img2, kp.pt.x+x+dx+1, kp.pt.y+y+dy)-GetPixelValue(img2, kp.pt.x+x+dx-1, kp.pt.y+y+dy));
+                        J[1] = -0.5*(GetPixelValue(img2, kp.pt.x+x+dx, kp.pt.y+y+dy+1)-GetPixelValue(img2, kp.pt.x+x+dx, kp.pt.y+y+dy-1));
                     } else {
                         // Inverse Jacobian
                         // NOTE this J does not change when dx, dy is updated, so we can store it and only compute error
+                        J[0] = -0.5*(GetPixelValue(img1, kp.pt.x+x+1, kp.pt.y+y)-GetPixelValue(img1, kp.pt.x+x-1, kp.pt.y+y));
+                        J[1] = -0.5*(GetPixelValue(img1, kp.pt.x+x, kp.pt.y+y+1)-GetPixelValue(img1, kp.pt.x+x, kp.pt.y+y-1));
                     }
 
                     // compute H, b and set cost;
-                    H;
-                    b;
-                    cost;
+                    error = GetPixelValue(img1, kp.pt.x+x, kp.pt.y+y)-GetPixelValue(img2, kp.pt.x+x+dx, kp.pt.y+y+dy);
+                    if (inverse == false || iter == 0)
+                        H += J*J.transpose();
+                    b += -J * error;
+                    cost += error * error;
                     // TODO END YOUR CODE HERE
                 }
 
             // compute update
             // TODO START YOUR CODE HERE (~1 lines)
             Eigen::Vector2d update;
+            update = H.ldlt().solve(b);
             // TODO END YOUR CODE HERE
 
             if (isnan(update[0])) {
@@ -246,13 +256,44 @@ void OpticalFlowMultiLevel(
     vector<Mat> pyr1, pyr2; // image pyramids
     // TODO START YOUR CODE HERE (~8 lines)
     for (int i = 0; i < pyramids; i++) {
-
+        if (i == 0) {
+            pyr1.push_back(img1);
+            pyr2.push_back(img2);
+        } else {
+            Mat dst1, dst2;
+            resize(pyr1[i-1], dst1, Size(pyr1[i-1].cols * pyramid_scale, pyr1[i-1].rows * pyramid_scale));
+            resize(pyr2[i-1], dst2, Size(pyr2[i-1].cols * pyramid_scale, pyr2[i-1].rows * pyramid_scale));
+            pyr1.push_back(dst1);
+            pyr2.push_back(dst2);
+        }
     }
     // TODO END YOUR CODE HERE
 
     // coarse-to-fine LK tracking in pyramids
     // TODO START YOUR CODE HERE
+    vector<KeyPoint> kp1_pyr, kp2_pyr;
+    for (auto &kp: kp1) {
+        auto kp_top = kp;
+        kp_top.pt *= scales[pyramids - 1];
+        kp1_pyr.push_back(kp_top);
+        kp2_pyr.push_back(kp_top);
+    }
+    for (int level = pyramids - 1; level >= 0; level--) {
+        success.clear();
+        OpticalFlowSingleLevel(pyr1[level], pyr2[level], kp1_pyr, kp2_pyr, success, inverse);
 
+        if (level != pyramids - 1) {
+            for(auto &kp: kp1_pyr) {
+                kp.pt /= pyramid_scale;
+            }
+            for(auto &kp: kp2_pyr) {
+                kp.pt /= pyramid_scale;
+            }
+        }
+        
+    }
+    for(auto &kp: kp2_pyr)
+        kp2.push_back(kp);
     // TODO END YOUR CODE HERE
     // don't forget to set the results into kp2
 }
